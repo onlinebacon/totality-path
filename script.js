@@ -139,13 +139,18 @@ const latLonToXY = (lat, lon) => {
     return [ x, y ];
 };
 
-const img = document.querySelector('img');
+const loadImage = (src) => new Promise((done) => {
+    const img = document.createElement('img');
+    img.onload = () => done(img);
+    img.src = src;
+});
+
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 
 ctx.lineWidth = 3;
 
-img.onload = () => {
+const render = (img) => {
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     ctx.beginPath();
     ctx.strokeStyle = '#0bf';
@@ -183,3 +188,5 @@ img.onload = () => {
         }
     }
 };
+
+loadImage('map.png').then(render);
