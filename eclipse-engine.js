@@ -130,7 +130,7 @@ const longToGHA = (lon) => {
 
 export class EclipseEngine {
 	constructor() {
-		this.model = SPHERE_MODEL;
+		this.model = ELLIPSOID_MODEL;
 		this.sunGHA = 0;
 		this.sunDec = 0;
 		this.sunDist = SUN_DEF_DIST;

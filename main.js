@@ -40,6 +40,13 @@ const dataAt = (time) => {
 	return null;
 };
 
+const setTime = (time) => {
+	const data = dataAt(time);
+	engine.setSunGHADec(data.sunGHA, data.sunDec);
+	engine.setMoonGHADec(data.moonGHA, data.moonDec);
+	engine.setMoonHP(data.moonHP);
+};
+
 const startTime = data[0].time;
 const endTime = data.at(-1).time;
 
@@ -55,10 +62,7 @@ const coordToCanvas = ([ lat, lon ]) => {
 
 const forEachPathPoint = (start, end, interval, it) => {
 	for (let time = start; time <= end; time += interval) {
-		const data = dataAt(time);
-		engine.setSunGHADec(data.sunGHA, data.sunDec);
-		engine.setMoonGHADec(data.moonGHA, data.moonDec);
-		engine.setMoonHP(data.moonHP);
+		setTime(time);
 		const shadow = engine.calcShadowCenter();
 		if (shadow === null) {
 			continue;
