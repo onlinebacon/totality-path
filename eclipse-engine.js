@@ -46,6 +46,21 @@ const VEC = {
 	flip: (vec) => {
 		return VEC.scale(vec, -1);
 	},
+	rotateX: ([ x, y, z ], angle) => {
+		const s = sin(angle);
+		const c = cos(angle);
+		return [ x, y*c + z*s, z*c - y*s ];
+	},
+	rotateY: ([ x, y, z ], angle) => {
+		const s = sin(angle);
+		const c = cos(angle);
+		return [ x*c - z*s, y, z*c + x*s ];
+	},
+	rotateZ: ([ x, y, z ], angle) => {
+		const s = sin(angle);
+		const c = cos(angle);
+		return [ x*c + y*s, y*c - x*s, z ];
+	},
 };
 
 const ellipseDerivative = (x, A, B) => {
@@ -56,13 +71,20 @@ const ellipseRounder = ([ x, y, z ]) => {
 	const eq = EARTH_AVG_RAD/EARTH_EQT_RAD;
 	const po = EARTH_AVG_RAD/EARTH_POL_RAD;
 	return [ x*eq, y*eq, z*po ];
-};	
+};
 
 const ellipseInvRounder = ([ x, y, z ]) => {
 	const eq = EARTH_EQT_RAD/EARTH_AVG_RAD;
 	const po = EARTH_POL_RAD/EARTH_AVG_RAD;
 	return [ x*eq, y*eq, z*po ];
-};	
+};
+
+const dirToLatLon = ([ x, y, z ]) => {
+	const lat = asin(z);
+	const f = sqrt(x**2 + y**2);
+	const lon = f > 0 ? acos(x/f) * (y < 0? -1: 1) : 0;
+	return [ lat, lon ];
+};
 
 export const SPHERE_MODEL = {
 	rayIntersection: (start, dir) => {
@@ -79,11 +101,7 @@ export const SPHERE_MODEL = {
 		return { point, distance };
 	},
 	surfaceVecToLatLon: (vec) => {
-		const [ x, y, z ] = VEC.normalize(vec);
-		const lat = asin(z);
-		const f = sqrt(x**2 + y**2);
-		const lon = f > 0 ? acos(x/f) * (y < 0? -1: 1) : 0;
-		return [ lat, lon ];
+		return dirToLatLon(VEC.normalize(vec));
 	},
 };
 
@@ -126,6 +144,32 @@ const calcUmbraDist = (sunRad, dist) => {
 
 const longToGHA = (lon) => {
 	return (TAU - lon) % TAU;
+};
+
+const calcUmbraAngle = (sunRad, dist) => {
+	return asin((sunRad - MOON_RAD)/dist);
+};
+
+const calcPenmbraAngle = (sunRad, dist) => {
+	return - asin((sunRad + MOON_RAD)/dist);
+};
+
+const buildShadowEdgeRay = (sun, sunRad, moon, azimuth, calcAngle) => {
+	const angle = calcAngle(sunRad, VEC.dist(sun, moon));
+	const [ sunLat, sunLon ] = dirToLatLon(VEC.normalize(VEC.sub(sun, moon)));
+	
+	let dir = VEC.rotateY([ -1, 0, 0 ], angle);
+	dir = VEC.rotateX(dir, azimuth);
+	dir = VEC.rotateY(dir, sunLat);
+	dir = VEC.rotateZ(dir, - sunLon);
+	
+	let start = VEC.rotateY([ 0, 0, MOON_RAD ], angle);
+	start = VEC.rotateX(start, azimuth);
+	start = VEC.rotateY(start, sunLat);
+	start = VEC.rotateZ(start, - sunLon);
+	start = VEC.sum(start, moon);
+
+	return { start, dir };
 };
 
 export class EclipseEngine {
@@ -193,5 +237,27 @@ export class EclipseEngine {
 		const type = intersection.distance > umbraDist ? 'ANULAR' : 'TOTAL';
 		const location = model.surfaceVecToLatLon(intersection.point).map(toDegree);
 		return { location, type };
+	}
+	calcUmbraEdgePoint(azimuth) {
+		const { model } = this;
+		const sun = this.calcSunVec();
+		const moon = this.calcMoonVec();
+		const edgeRay = buildShadowEdgeRay(sun, this.sunRad, moon, toRadian(azimuth), calcUmbraAngle);
+		const intersection = model.rayIntersection(edgeRay.start, edgeRay.dir);
+		if (intersection == null) {
+			return null;
+		}
+		return model.surfaceVecToLatLon(intersection.point).map(toDegree);
+	}
+	calcPenumbraEdgePoint(azimuth) {
+		const { model } = this;
+		const sun = this.calcSunVec();
+		const moon = this.calcMoonVec();
+		const edgeRay = buildShadowEdgeRay(sun, this.sunRad, moon, toRadian(azimuth), calcPenmbraAngle);
+		const intersection = model.rayIntersection(edgeRay.start, edgeRay.dir);
+		if (intersection == null) {
+			return null;
+		}
+		return model.surfaceVecToLatLon(intersection.point).map(toDegree);
 	}
 }

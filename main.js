@@ -52,7 +52,7 @@ const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 const img = document.createElement('img');
 
-const coordToCanvas = ([ lat, lon ]) => {
+const locationToMapPos = ([ lat, lon ]) => {
 	const x = (lon/360 + 0.5) * canvas.width;
 	const y = (0.5 - lat/180) * canvas.height;
 	return [ x, y ];
@@ -65,7 +65,7 @@ const forEachPathPoint = (start, end, interval, it) => {
 		if (shadow === null) {
 			continue;
 		}
-		const point = coordToCanvas(shadow.location);
+		const point = locationToMapPos(shadow.location);
 		it(time, point);
 	}
 };
@@ -81,8 +81,17 @@ const timeToStrHourMin = (time) => {
 	}`;
 };
 
-const plotPath = () => {
+const drawMap = () => {
 	ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+};
+
+const dot = ([ x, y ], r) => {
+	ctx.beginPath();
+	ctx.arc(x, y, r, 0, Math.PI*2);
+	ctx.fill();
+};
+
+const plotPath = () => {
 	ctx.stroke();
 
 	const s = canvas.width * 0.001;
@@ -101,18 +110,62 @@ const plotPath = () => {
 	});
 	ctx.stroke();
 
+	ctx.fillStyle = '#000';
 	ctx.textAlign = 'right';
 	ctx.font = 'bold ' + (s * 6) + 'px arial';
-	forEachPathPoint(startTime, endTime, 10 * MIN, (time, [ x, y ]) => {
-		console.log()
-		ctx.beginPath();
-		ctx.arc(x, y, s, 0, Math.PI*2);
-		ctx.fill();
+	forEachPathPoint(startTime, endTime, 10 * MIN, (time, pos) => {
+		dot(pos, s);
+		const [ x, y ] = pos;
 		ctx.fillText(timeToStrHourMin(time), x - s * 2, y - s * 2);
 	});
 };
 
+const plotUmbra = () => {
+	ctx.fillStyle = 'rgb(0, 0, 0, 0.25)';
+	ctx.beginPath();
+	let first = false;
+	for (let i=0; i<360; ++i) {
+		const loc = engine.calcUmbraEdgePoint(i);
+		if (loc == null) {
+			continue;
+		}
+		const pos = locationToMapPos(loc);
+		if (first) {
+			ctx.moveTo(...pos);
+			first = false;
+		} else {
+			ctx.lineTo(...pos);
+		}
+	}
+	ctx.fill();
+};
+
+const plotPenumbra = () => {
+	ctx.fillStyle = 'rgb(0, 0, 0, 0.1)';
+	ctx.beginPath();
+	let first = false;
+	for (let i=0; i<360; ++i) {
+		const loc = engine.calcPenumbraEdgePoint(i);
+		if (loc == null) {
+			continue;
+		}
+		const pos = locationToMapPos(loc);
+		if (first) {
+			ctx.moveTo(...pos);
+			first = false;
+		} else {
+			ctx.lineTo(...pos);
+		}
+	}
+	ctx.fill();
+};
+
 img.onload = () => {
+	drawMap();
+	setTime(18*HOUR + 36*MIN + 13.8*SEC);
+	plotPenumbra();
+	plotUmbra();
 	plotPath();
 };
+
 img.src = './map.png';
