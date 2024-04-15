@@ -92,8 +92,6 @@ const dot = ([ x, y ], r) => {
 };
 
 const plotPath = () => {
-	ctx.stroke();
-
 	const s = canvas.width * 0.001;
 	
 	ctx.strokeStyle = '#0bf';
