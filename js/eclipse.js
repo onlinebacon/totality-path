@@ -1,6 +1,6 @@
 import Vec from "./vec.js";
 
-const { sqrt, sin, cos, asin, acos, atan } = Math;
+const { abs, sqrt, sin, cos, tan, asin, acos, atan } = Math;
 
 const EARTH_AVG_RAD = 6371.0088;
 const EARTH_POL_RAD = 6356.7523;
@@ -19,7 +19,22 @@ const calcUmbraDist = (sunMoonDist) => {
 	return (SUN_RAD / (SUN_RAD - MOON_RAD) - 1) * sunMoonDist;
 };
 
+const dirToLatLon = ({ x, y, z }) => {
+	const f = sqrt(x**2 + y**2);
+	const lon = f > 0? acos(x/f) * (y < 0? -1: 1) : 0;
+	const lat = asin(z);
+	return [ lat, lon ];
+};
+
+const latLonToDir = ([ lat, lon ]) => {
+	const x = cos(lat)*cos(lon);
+	const y = cos(lat)*sin(lon);
+	const z = sin(lat);
+	return new Vec(x, y, z);
+};
+
 export const SPHERE = {
+	radius: EARTH_AVG_RAD,
 	rayIntersection: (start = new Vec(), dir = new Vec()) => {
 		const tMid = - start.dot(dir);
 		const midPoint = start.plus(dir.mul(tMid));
@@ -32,11 +47,10 @@ export const SPHERE = {
 		return start.plus(dir.mul(dist));
 	},
 	gpVecToLatLon: (vec = new Vec()) => {
-		const { x, y, z } = vec.normalize();
-		const f = sqrt(x**2 + y**2);
-		const lat = asin(z);
-		const lon = acos(x/f) * (y < 0? -1: 1);
-		return [ lat, lon ];
+		return dirToLatLon(vec.normalize());
+	},
+	gpLatLonToVec: (coord = [ 0, 0 ]) => {
+		return latLonToDir(coord).mul(EARTH_AVG_RAD);
 	},
 };
 
@@ -60,6 +74,15 @@ export const ELLIPSOID = {
 		const lat = atan(-s);
 		return [ lat, lon ];
 	},
+	gpLatLonToVec: ([ lat, lon ]) => {
+		const s = abs(tan(lat) / EARTH_EQT_RAD * EARTH_POL_RAD);
+		const tf = 1 / sqrt(1 + s**2);
+		const tz = sqrt(1 - tf**2) * (lat < 0? -1: 1);
+		const x = cos(lon)*tf*EARTH_EQT_RAD;
+		const y = sin(lon)*tf*EARTH_EQT_RAD;
+		const z = tz*EARTH_POL_RAD;
+		return new Vec(x, y, z);
+	},
 };
 
 export const latLonDistToVec = (lat, lon, dist) => {
@@ -82,4 +105,73 @@ export const calcShadowCenter = (model = SPHERE, sunVec = new Vec(), moonVec = n
 	const dist = intersection.minus(moonVec).mag();
 	const type = dist > calcUmbraDist(sunMoonDist) ? ANULAR : TOTAL;
 	return { gp, type };
+};
+
+const calcUmbraAngle = (sunMoonDist) => {
+	return asin((SUN_RAD - MOON_RAD)/sunMoonDist);
+};
+
+const calcPenumbraAngle = (sunMoonDist) => {
+	return - asin((SUN_RAD + MOON_RAD)/sunMoonDist);
+};
+
+const calcShadowEdgePoint = (
+	model = SPHERE,
+	sunVec = new Vec(),
+	moonVec = new Vec(),
+	shadowAngleFn = calcUmbraAngle,
+	angle = 0,
+) => {
+	const moonToSun = sunVec.minus(moonVec);
+	const sunMoonDist = moonToSun.mag();
+
+	let start = new Vec( 0, 0, MOON_RAD);
+	let dir   = new Vec(-1, 0, 0);
+	
+	const tilt = shadowAngleFn(sunMoonDist);
+
+	start = start.rotY(tilt).rotX(angle);
+	dir   = dir  .rotY(tilt).rotX(angle);
+
+	const [ dirLat, dirLon ] = SPHERE.gpVecToLatLon(moonToSun);
+
+	start = start.rotY(dirLat).rotZ(-dirLon).plus(moonVec);
+	dir   = dir  .rotY(dirLat).rotZ(-dirLon);
+
+	const point = model.rayIntersection(start, dir);
+	if (point == null) {
+		return null;
+	}
+
+	return model.gpVecToLatLon(point);
+};
+
+export const calcUmbraEdgePoint = (
+	model = SPHERE,
+	sunVec = new Vec(),
+	moonVec = new Vec(),
+	angle = 0,
+) => {
+	return calcShadowEdgePoint(
+		model,
+		sunVec,
+		moonVec,
+		calcUmbraAngle,
+		angle,
+	);
+};
+
+export const calcPenumbraEdgePoint = (
+	model = SPHERE,
+	sunVec = new Vec(),
+	moonVec = new Vec(),
+	angle = 0,
+) => {
+	return calcShadowEdgePoint(
+		model,
+		sunVec,
+		moonVec,
+		calcPenumbraAngle,
+		angle,
+	);
 };

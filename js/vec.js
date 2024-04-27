@@ -27,6 +27,24 @@ class Vec {
 	dot({ x, y, z }) {
 		return this.x*x + this.y*y + this.z*z;
 	}
+	rotX(angle) {
+		const s = Math.sin(angle);
+		const c = Math.cos(angle);
+		const { x, y, z } = this;
+		return new Vec(x, y*c + z*s, z*c - y*s);
+	}
+	rotY(angle) {
+		const s = Math.sin(angle);
+		const c = Math.cos(angle);
+		const { x, y, z } = this;
+		return new Vec(x*c - z*s, y, z*c + x*s);
+	}
+	rotZ(angle) {
+		const s = Math.sin(angle);
+		const c = Math.cos(angle);
+		const { x, y, z } = this;
+		return new Vec(x*c + y*s, y*c - x*s, z);
+	}
 }
 
 export default Vec;

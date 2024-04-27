@@ -4,6 +4,25 @@
 		<script type="module" src="js/main.js"></script>
 	</head>
 	<body>
-		<canvas width="2400" height="1200"></canvas>
+		<form spellcheck="false">
+			<div class="box">
+				<div class="title">
+					Almanac data
+					<span class="comment">(Hour / Sun GHA / Sun Dec / Moon GHA / Moon Dec / Moon HP)</span>
+				</div>
+				<textarea></textarea>
+				<div class="field-space"></div>
+				<div class="title">Model</div>
+				<select>
+					<option value="ellipsoid">Ellipsoid</option>
+					<option value="sphere">Sphere</option>
+				</select>
+			</div>
+			<div class="box">
+				<div class="title">Time</div>
+				<input type="range">
+				<canvas width="1200" height="600"></canvas>
+			</div>
+		</form>
 	</body>
 </html>

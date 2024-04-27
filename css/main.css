@@ -1,4 +1,44 @@
 body {
-    margin: 0px;
+	background-color: #1A1A1A;
+	font-family: Arial, Helvetica, sans-serif;
+	--width: 1200px;
+}
+.box {
+	color: #ccc;
 	background-color: #222;
+	padding: 10px;
+	width: var(--width);
+	margin: 20px auto;
+}
+.box textarea {
+	background-color: #333;
+	color: #ccc;
+	resize: none;
+	font-size: 14px;
+	width: 100%;
+	padding: 10px;
+	height: 140px;
+	border: none;
+}
+.field-space {
+	height: 20px;
+}
+input[type=range] {
+	width: 100%;
+}
+canvas {
+	background-color: #333;
+	margin-top: 10px;
+}
+select {
+	background-color: #555;
+	border: none;
+	height: 26px;
+	width: 100px;
+	font-family: monospace;
+	color: #ccc;
+}
+.comment {
+	color: #777;
+	font-style: italic;
 }
