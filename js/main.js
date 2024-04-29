@@ -1,12 +1,14 @@
 import ANGLE from "./angle.js";
 import { animate } from "./animate.js";
-import { ELLIPSOID, SPHERE, calcPenumbraEdgePoint, calcShadowCenter, calcUmbraEdgePoint, latLonDistToVec } from "./eclipse.js";
+import * as ECLIPSE from "./eclipse.js";
+import * as NAV from "./navigate.js";
 
-let model = ELLIPSOID;
 const models = {
-	ellipsoid: ELLIPSOID,
-	sphere: SPHERE,
+	ellipsoid: ECLIPSE.ELLIPSOID,
+	sphere:    ECLIPSE.SPHERE,
 };
+
+let model = models.ellipsoid;
 
 const SEC  = 1000;
 const MIN  = 60 * SEC;
@@ -28,18 +30,6 @@ const dot = (x, y) => {
 	ctx.fill();
 };
 
-const project = (lat, lon) => {
-	const x = (lon / (Math.PI * 2) + 0.5) * canvas.width;
-	const y = (0.5 - lat / Math.PI) * canvas.height;
-	return [ x, y ];
-};
-
-const pointToCoord = (x, y) => {
-	const lon = (x / canvas.width - 0.5) * Math.PI*2;
-	const lat = (0.5 - y / canvas.height) * Math.PI;
-	return [ lat, lon ].map(x => (x/Math.PI*180).toFixed(6)).join(', ');
-};
-
 const timeRangeInput = document.querySelector('input');
 
 let lines = [];
@@ -53,7 +43,7 @@ const setInputData = (raw) => {
 		const [ hour, ...values ] = cols;
 		const [ sunGHA, sunDec, moonGHA, moonDec, moonHP ] = values.map(ANGLE.parse);
 		const time = Number(hour) * HOUR;
-		const moonDist = SPHERE.radius / Math.tan(moonHP);
+		const moonDist = models.sphere.radius / Math.tan(moonHP);
 		return { time, sunGHA, sunDec, moonGHA, moonDec, moonDist };
 	});
 	start = lines[0].time;
@@ -61,7 +51,7 @@ const setInputData = (raw) => {
 	time = start;
 	timeRangeInput.min = Math.floor(start/MIN);
 	timeRangeInput.max = Math.floor(end/MIN);
-	timeRangeInput.step = 1;
+	timeRangeInput.step = SEC/MIN;
 };
 
 const almanacInputLines = `
@@ -96,29 +86,40 @@ const dataAt = (time) => {
 const img = await loadImage('./map.png');
 
 const drawMap = () => {
-	ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	const [ ax, ay ] = NAV.revertZoom([ 0, 0 ]);
+	const [ bx, by ] = NAV.revertZoom([ 1, 1 ]);
+	const sx = ax*img.width;
+	const sy = ay*img.height;
+	const sWidth = (bx - ax)*img.width;
+	const sHeight = (by - ay)*img.height;
+	ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
 };
 
 const getShadowCenterAt = (time) => {
 	const { sunGHA, sunDec, moonGHA, moonDec, moonDist } = dataAt(time);
-	const sunVec = latLonDistToVec(sunDec, - sunGHA, 150e6);
-	const moonVec = latLonDistToVec(moonDec, - moonGHA, moonDist);
-	const shadow = calcShadowCenter(model, sunVec, moonVec);
+	const sunVec = ECLIPSE.latLonDistToVec(sunDec, - sunGHA, 150e6);
+	const moonVec = ECLIPSE.latLonDistToVec(moonDec, - moonGHA, moonDist);
+	const shadow = ECLIPSE.calcShadowCenter(model, sunVec, moonVec);
 	if (shadow == null) {
 		return null;
 	}
-	const [ lat, lon ] = shadow.gp;
-	return project(lat, lon);
+	return NAV.normalToPoint(NAV.applyZoom(NAV.latLonToNormal(shadow.gp)));
 };
 
 const strTime = (time) => {
-	const tMin = Math.floor(time / MIN);
+	const tSec = Math.round(time / SEC);
+	const sec = tSec % 60;
+	const tMin = (tSec - sec) / 60;
 	const min = tMin % 60;
 	const tHrs = (tMin - min) / 60;
+	const hrs = tHrs;
 	return `${
-		tHrs.toString().padStart(2, '0')
+		hrs.toString().padStart(2, '0')
 	}:${
 		min.toString().padStart(2, '0')
+	}:${
+		sec.toString().padStart(2, '0')
 	}`;
 };
 
@@ -172,8 +173,8 @@ const drawTimeStamps = (interval) => {
 const drawShadowAt = (time, color, n, fn) => {
 	ctx.strokeStyle = color;
 	const { sunGHA, sunDec, moonGHA, moonDec, moonDist } = dataAt(time);
-	const sunVec = latLonDistToVec(sunDec, - sunGHA, 150e6);
-	const moonVec = latLonDistToVec(moonDec, - moonGHA, moonDist);
+	const sunVec = ECLIPSE.latLonDistToVec(sunDec, - sunGHA, 150e6);
+	const moonVec = ECLIPSE.latLonDistToVec(moonDec, - moonGHA, moonDist);
 	ctx.beginPath();
 	let started = false;
 	for (let i=0; i<n; ++i) {
@@ -183,8 +184,7 @@ const drawShadowAt = (time, color, n, fn) => {
 			started = false;
 			continue;
 		}
-		const [ lat, lon ] = gp;
-		const [ x, y ] = project(lat, lon);
+		const [ x, y ] = NAV.normalToPoint(NAV.applyZoom(NAV.latLonToNormal(gp)));
 		if (!started) {
 			ctx.moveTo(x, y);
 			started = true;
@@ -204,8 +204,8 @@ const writeTime = () => {
 
 const render = () => {
 	drawMap();
-	drawShadowAt(time, 'rgba(0, 0, 0, 0.2)', 3600, calcPenumbraEdgePoint);
-	drawShadowAt(time, 'rgba(0, 0, 0, 0.2)', 360, calcUmbraEdgePoint);
+	drawShadowAt(time, 'rgba(0, 0, 0, 0.2)', 3600, ECLIPSE.calcPenumbraEdgePoint);
+	drawShadowAt(time, 'rgba(0, 0, 0, 0.2)', 360, ECLIPSE.calcUmbraEdgePoint);
 	drawPathLine(MIN);
 	drawTimeStamps(10 * MIN);
 	writeTime();
@@ -238,5 +238,10 @@ const textarea = document.querySelector('textarea');
 textarea.value = almanacInputLines.trim().replace(/\s*\n\s*/g, '\n');
 textarea.addEventListener('input', () => {
 	setInputData(textarea.value);
+	render();
+});
+
+canvas.addEventListener('wheel', e => {
+	NAV.zoomAt([ e.offsetX, e.offsetY ], 1 - e.deltaY/1000);
 	render();
 });
