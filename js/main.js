@@ -48,10 +48,10 @@ const setInputData = (raw) => {
 	});
 	start = lines[0].time;
 	end = lines.at(-1).time;
-	time = start;
 	timeRangeInput.min = Math.floor(start/MIN);
 	timeRangeInput.max = Math.floor(end/MIN);
 	timeRangeInput.step = SEC/MIN;
+	time = timeRangeInput.value * MIN;
 };
 
 const almanacInputLines = `
