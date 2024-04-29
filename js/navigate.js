@@ -26,7 +26,7 @@ export const revertZoom = ([ x, y ]) => {
 };
 
 export const normalToLatLon = ([ x, y ]) => {
-	return [ (0.5 - y)*Math.PI, (0.5 + x)*Math.PI*2 ];
+	return [ (0.5 - y)*Math.PI, (x - 0.5)*Math.PI*2 ];
 };
 
 export const latLonToNormal = ([ lat, lon ]) => {

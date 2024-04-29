@@ -36,6 +36,7 @@ let lines = [];
 let start;
 let end;
 let time;
+let inspect = null;
 
 const setInputData = (raw) => {
 	lines = raw.trim().split(/\n/).map(line => {
@@ -243,5 +244,15 @@ textarea.addEventListener('input', () => {
 
 canvas.addEventListener('wheel', e => {
 	NAV.zoomAt([ e.offsetX, e.offsetY ], 1 - e.deltaY/1000);
+	e.preventDefault();
+	e.stopPropagation();
+	e.stopImmediatePropagation();
 	render();
+});
+
+canvas.addEventListener('dblclick', e => {
+	const x = e.offsetX;
+	const y = e.offsetY;
+	const normal = NAV.revertZoom(NAV.pointToNormal([ x, y ]));
+	inspect = NAV.normalToLatLon(normal);
 });
