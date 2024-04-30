@@ -218,7 +218,7 @@ timeRangeInput.addEventListener('input', () => {
 });
 
 window.addEventListener('keydown', e => {
-	if (/^numpad?enter$/i.test(e.code)) {
+	if (/^(numpad)?enter$/i.test(e.code)) {
 		animate(5000, t => {
 			timeRangeInput.value = time / MIN;
 			time = start + (end - start)*t;
