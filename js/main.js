@@ -245,10 +245,14 @@ const drawPreviewPopup = () => {
 
 	drawSelectedGP(tx, ty);
 
-	let popup_xlen = 200;
-	let popup_ylen = 150;
-	let popup_x = tx;
-	let popup_y = ty - popup_ylen;
+	const popup_xlen = 200;
+	const popup_ylen = 150;
+	const popup_x = tx;
+	const popup_y = ty - popup_ylen;
+	const cx = popup_x + popup_xlen/2;
+	const cy = popup_y + popup_ylen/2;
+
+	const angleToPx = popup_ylen / (1.75 / 180 * Math.PI);
 
 	ctx.fillStyle = '#444';
 	ctx.fillRect(popup_x, popup_y, popup_xlen, popup_ylen);
@@ -258,8 +262,20 @@ const drawPreviewPopup = () => {
 	ctx.rect(popup_x, popup_y, popup_xlen, popup_ylen);
 	ctx.clip();
 
-	const { sunVec, moonVec } = dataAt(time);
-	ECLIPSE.calcPreview(model, selectedGP, sunVec, moonVec);
+	const { sunVec, moonVec } = getSunMoonVecAt(time);
+	const prev = ECLIPSE.calcPreview(model, selectedGP, sunVec, moonVec);
+	const dx = prev.dist * angleToPx *   Math.sin(prev.dir);
+	const dy = prev.dist * angleToPx * - Math.cos(prev.dir);
+
+	ctx.fillStyle = '#fdb';
+	ctx.beginPath();
+	ctx.arc(cx, cy, prev.sunSD * angleToPx, 0, Math.PI*2);
+	ctx.fill();
+
+	ctx.fillStyle = '#222';
+	ctx.beginPath();
+	ctx.arc(cx + dx, cy + dy, prev.moonSD * angleToPx, 0, Math.PI*2);
+	ctx.fill();
 
 	ctx.restore();
 

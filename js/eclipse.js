@@ -1,7 +1,7 @@
 import ANGLE from "./angle.js";
 import Vec from "./vec.js";
 
-const { abs, sqrt, sin, cos, tan, asin, atan } = Math;
+const { abs, sqrt, sin, cos, tan, asin, atan, acos } = Math;
 
 const EARTH_AVG_RAD = 6371.0088;
 const EARTH_POL_RAD = 6356.7523;
@@ -88,16 +88,23 @@ export const calcPreview = (model, gp, sunVec = new Vec(), moonVec = new Vec()) 
 	const [ lat, lon ] = gp;
 	const obsVec = model.gpLatLonToVec(gp);
 	
-	console.log(gp, sunVec, moonVec);
-
 	sunVec  = sunVec .minus(obsVec);
 	moonVec = moonVec.minus(obsVec);
 
 	const sunSD  = asin(SUN_RAD  / sunVec .mag());
 	const moonSD = asin(MOON_RAD / moonVec.mag());
 
-	const sunDir = sunVec.rotZ(lon).rotY(-lat).normalize();
+	const sunDir  = sunVec .rotZ(lon).rotY(-lat).normalize();
 	const moonDir = moonVec.rotZ(lon).rotY(-lat).normalize();
+	
+	const sunAz = ANGLE.calcUnsigned(sunDir.z, sunDir.y);
+	const sunAlt = asin(sunDir.x);
+	
+	const { x, y } = moonDir.rotX(-sunAz).rotY(sunAlt);
+	const dist = acos(sunDir.dot(moonDir));
+	const dir = ANGLE.calcUnsigned(x, y);
+
+	return { sunSD, moonSD, dist, dir };
 };
 
 export const latLonDistToVec = (lat, lon, dist) => {
