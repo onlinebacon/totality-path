@@ -36,7 +36,7 @@ let lines = [];
 let start;
 let end;
 let time;
-let inspect = null;
+let selectedGP = null;
 
 const setInputData = (raw) => {
 	lines = raw.trim().split(/\n/).map(line => {
@@ -206,6 +206,76 @@ const writeTime = () => {
 	ctx.fillText(strTime(time), 10, canvas.height - 10);
 };
 
+const strGP = ([ lat, lon ]) => {
+	return `${
+		ANGLE.stringify(lat, 'N ', 'S ')
+	}, ${
+		ANGLE.stringify(lon, 'E ', 'W ')
+	}`;
+};
+
+const drawSelectedGP = (tx, ty) => {
+	ctx.fillStyle = '#07f';
+	ctx.strokeStyle = '#07f';
+
+	ctx.globalAlpha = 0.25;
+	ctx.beginPath();
+	ctx.arc(tx, ty, 10, 0, Math.PI*2);
+	ctx.fill();
+
+	ctx.globalAlpha = 1;
+	ctx.beginPath();
+	ctx.arc(tx, ty, 10, 0, Math.PI*2);
+	ctx.stroke();
+
+	ctx.fillStyle = '#000'
+	ctx.beginPath();
+	ctx.arc(tx, ty, 3, 0, Math.PI*2);
+	ctx.fill();
+};
+
+const drawPreviewPopup = () => {
+	if (selectedGP == null) {
+		return;
+	}
+
+	const [ tx, ty ] = NAV.normalToPoint(NAV.applyZoom(NAV.latLonToNormal(selectedGP)))
+
+	ctx.fillStyle = '#000';
+
+	drawSelectedGP(tx, ty);
+
+	let popup_xlen = 200;
+	let popup_ylen = 150;
+	let popup_x = tx;
+	let popup_y = ty - popup_ylen;
+
+	ctx.fillStyle = '#444';
+	ctx.fillRect(popup_x, popup_y, popup_xlen, popup_ylen);
+
+	ctx.save();
+	ctx.beginPath();
+	ctx.rect(popup_x, popup_y, popup_xlen, popup_ylen);
+	ctx.clip();
+
+	const { sunVec, moonVec } = dataAt(time);
+	ECLIPSE.calcPreview(model, selectedGP, sunVec, moonVec);
+
+	ctx.restore();
+
+	ctx.strokeStyle = '#fff';
+	ctx.lineWidth = 1.5;
+	ctx.beginPath();
+	ctx.rect(popup_x, popup_y, popup_xlen, popup_ylen);
+	ctx.stroke();
+
+	ctx.font = '11px monospace';
+	ctx.textBaseline = 'top';
+	ctx.textAlign = 'center';
+	ctx.fillStyle = '#fff';
+	ctx.fillText(strGP(selectedGP), popup_x + popup_xlen/2, popup_y + 7);
+};
+
 const render = () => {
 	drawMap();
 	drawShadowAt(time, 'rgba(0, 0, 0, 0.2)', 3600, ECLIPSE.calcPenumbraEdgePoint);
@@ -213,6 +283,7 @@ const render = () => {
 	drawPathLine(MIN);
 	drawTimeStamps(10 * MIN);
 	writeTime();
+	drawPreviewPopup();
 };
 
 timeRangeInput.addEventListener('input', () => {
@@ -257,5 +328,6 @@ canvas.addEventListener('dblclick', e => {
 	const x = e.offsetX;
 	const y = e.offsetY;
 	const normal = NAV.revertZoom(NAV.pointToNormal([ x, y ]));
-	inspect = NAV.normalToLatLon(normal);
+	selectedGP = NAV.normalToLatLon(normal);
+	render();
 });
