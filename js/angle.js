@@ -38,6 +38,46 @@ const parse = (str = '') => {
 	return toRadian(neg? - sum: sum);
 };
 
-const ANGLE = { parse };
+const stringify = (angle, pos = '', neg = '-', signAtTheEnd = false) => {
+	const dec = Math.abs(angle / Math.PI * 180);
+	const tSec = Math.round(dec * 3600);
+	const sec = tSec % 60;
+	const tMin = (tSec - sec) / 60;
+	const min = tMin % 60;
+	const tDeg = (tMin - min) / 60;
+	const deg = tDeg;
+	const sign = angle < 0 ? neg : pos;
+	const middle = `${deg}°${(min + '').padStart(2, 0)}'${(sec + '').padStart(2, 0)}"`;
+	return signAtTheEnd ? middle + sign : sign + middle;
+};
+
+const calcSigned = (adj, opp) => {
+	const len = Math.sqrt(adj**2 + opp**2);
+	if (len === 0) {
+		return len;
+	}
+	if (opp >= 0) {
+		return Math.acos(adj/len);
+	}
+	return - Math.acos(adj/len);
+};
+
+const calcUnsigned = (adj, opp) => {
+	const len = Math.sqrt(adj**2 + opp**2);
+	if (len === 0) {
+		return len;
+	}
+	if (opp >= 0) {
+		return Math.acos(adj/len);
+	}
+	return Math.PI*2 - Math.acos(adj/len);
+};
+
+const ANGLE = {
+	parse,
+	stringify,
+	calcSigned,
+	calcUnsigned,
+};
 
 export default ANGLE;

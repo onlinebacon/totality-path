@@ -1,6 +1,7 @@
+import ANGLE from "./angle.js";
 import Vec from "./vec.js";
 
-const { abs, sqrt, sin, cos, tan, asin, acos, atan } = Math;
+const { abs, sqrt, sin, cos, tan, asin, atan } = Math;
 
 const EARTH_AVG_RAD = 6371.0088;
 const EARTH_POL_RAD = 6356.7523;
@@ -20,8 +21,7 @@ const calcUmbraDist = (sunMoonDist) => {
 };
 
 const dirToLatLon = ({ x, y, z }) => {
-	const f = sqrt(x**2 + y**2);
-	const lon = f > 0? acos(x/f) * (y < 0? -1: 1) : 0;
+	const lon = ANGLE.calcSigned(x, y);
 	const lat = asin(z);
 	return [ lat, lon ];
 };
@@ -68,8 +68,7 @@ export const ELLIPSOID = {
 		return new Vec(x/eq, y/eq, z/eq);
 	},
 	gpVecToLatLon: ({ x, y, z }) => {
-		const f = sqrt(x**2 + y**2);
-		const lon = acos(x/f) * (y < 0? -1: 1);
+		const lon = ANGLE.calcSigned(x, y);
 		const s = ellipseDerivative(z, EARTH_POL_RAD, EARTH_EQT_RAD);
 		const lat = atan(-s);
 		return [ lat, lon ];
