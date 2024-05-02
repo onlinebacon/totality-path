@@ -38,14 +38,19 @@ let end;
 let time;
 let selectedGP = null;
 
+const hpToDist = (hp) => {
+	return models.sphere.radius / Math.tan(hp);
+};
+
 const setInputData = (raw) => {
 	lines = raw.trim().split(/\n/).map(line => {
 		const cols = line.trim().split(/\s*\|\s*/);
 		const [ hour, ...values ] = cols;
-		const [ sunGHA, sunDec, moonGHA, moonDec, moonHP ] = values.map(ANGLE.parse);
+		const [ sunGHA, sunDec, moonGHA, moonDec, moonHP, sunHP ] = values.map(ANGLE.parse);
 		const time = Number(hour) * HOUR;
-		const moonDist = models.sphere.radius / Math.tan(moonHP);
-		return { time, sunGHA, sunDec, moonGHA, moonDec, moonDist };
+		const moonDist = hpToDist(moonHP);
+		const sunDist = sunHP == null ? 150e6 : hpToDist(sunHP);
+		return { time, sunGHA, sunDec, moonGHA, moonDec, moonDist, sunDist };
 	});
 	start = lines[0].time;
 	end = lines.at(-1).time;
@@ -98,8 +103,8 @@ const drawMap = () => {
 };
 
 const getSunMoonVecAt = (time) => {
-	const { sunGHA, sunDec, moonGHA, moonDec, moonDist } = dataAt(time);
-	const sunVec = ECLIPSE.latLonDistToVec(sunDec, - sunGHA, 150e6);
+	const { sunGHA, sunDec, moonGHA, moonDec, moonDist, sunDist } = dataAt(time);
+	const sunVec = ECLIPSE.latLonDistToVec(sunDec, - sunGHA, sunDist);
 	const moonVec = ECLIPSE.latLonDistToVec(moonDec, - moonGHA, moonDist);
 	return { sunVec, moonVec };
 };
