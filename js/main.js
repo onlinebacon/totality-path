@@ -97,10 +97,15 @@ const drawMap = () => {
 	ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
 };
 
-const getShadowCenterAt = (time) => {
+const getSunMoonVecAt = (time) => {
 	const { sunGHA, sunDec, moonGHA, moonDec, moonDist } = dataAt(time);
 	const sunVec = ECLIPSE.latLonDistToVec(sunDec, - sunGHA, 150e6);
 	const moonVec = ECLIPSE.latLonDistToVec(moonDec, - moonGHA, moonDist);
+	return { sunVec, moonVec };
+};
+
+const getShadowCenterAt = (time) => {
+	const { sunVec, moonVec } = getSunMoonVecAt(time);
 	const shadow = ECLIPSE.calcShadowCenter(model, sunVec, moonVec);
 	if (shadow == null) {
 		return null;
@@ -172,10 +177,8 @@ const drawTimeStamps = (interval) => {
 };
 
 const drawShadowAt = (time, color, n, fn) => {
+	const { sunVec, moonVec } = getSunMoonVecAt(time);
 	ctx.strokeStyle = color;
-	const { sunGHA, sunDec, moonGHA, moonDec, moonDist } = dataAt(time);
-	const sunVec = ECLIPSE.latLonDistToVec(sunDec, - sunGHA, 150e6);
-	const moonVec = ECLIPSE.latLonDistToVec(moonDec, - moonGHA, moonDist);
 	ctx.beginPath();
 	let started = false;
 	for (let i=0; i<n; ++i) {
